@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SOS</title>
+  <link rel="stylesheet" href="../css/styles.css">
+
+  <style>
+    .main { padding: 30px; }
+
+    .page-title {
+      font-size: 32px;
+      color: #a78bfa;
+      margin-bottom: 25px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    .top-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 25px;
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.75);
+      padding: 25px;
+      border-radius: 20px;
+      border: 1px solid rgba(99,102,241,0.2);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    .title {
+      font-size: 20px;
+      color: #a78bfa;
+      margin-bottom: 15px;
+    }
+
+    #bigSOS {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #ef4444, #7f1d1d);
+      color: white;
+      font-size: 24px;
+      border: none;
+      cursor: pointer;
+      margin: 20px auto;
+      display: block;
+      box-shadow: 0 0 40px rgba(239,68,68,0.7);
+    }
+
+    select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      margin-top: 12px;
+      border: none;
+      background: #1e293b;
+      color: white;
+    }
+
+    .bottom-card { margin-top: 25px; }
+
+    .history-item {
+      padding: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="sidebar">
+  <div class="logo">📍 Trackora</div>
+  <a class="nav-item" href="dashboard.html">🏠 Dashboard</a>
+  <a class="nav-item" href="tracking.html">📍 Live Tracking</a>
+  <a class="nav-item" href="sos.html">🚨 SOS</a>
+  <a class="nav-item" href="analytics.html">📊 Analytics</a>
+  <a class="nav-item" href="profile.html">👤 Profile</a>
+  <a class="nav-item" href="admin.html">👑 Admin</a>
+  <a class="nav-item" href="login.html">🚪 Logout</a>
+  <a class="nav-item active" href="sos.html">SOS</a>
+</div>
+
+<div class="main">
+<div class="container">
+
+  <h1 class="page-title">SOS Emergency</h1>
+
+  <div class="top-grid">
+
+    <!-- 🚨 SOS -->
+    <div class="card">
+      <h3 class="title">🚨 Emergency</h3>
+      <button id="bigSOS" onclick="sendSOS()">SOS</button>
+      <p id="sosMsg">Press in case of emergency</p>
+    </div>
+
+    <!-- 👥 CONTACTS -->
+    <div class="card">
+      <h3 class="title">👥 Select Contacts</h3>
+      <select id="userSelect1"></select>
+      <select id="userSelect2"></select>
+    </div>
+
+  </div>
+
+  <!-- 📜 HISTORY -->
+  <div class="card bottom-card">
+    <h3 class="title">📜 SOS History</h3>
+    <div id="sosHistory"></div>
+  </div>
+
+</div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+// ✅ USER ID FIRST (VERY IMPORTANT)
+const user_id = localStorage.getItem("user_id")
+console.log("USER:", user_id)
+
+if (!user_id) {
+  window.location.href = "login.html"
+}
+
+// ✅ SUPABASE CLIENT
+const supabase = createClient(
+  "https://cjvsaqgomgzygkcryaom.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqdnNhcWdvbWd6eWdrY3J5YW9tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NzIxOTYsImV4cCI6MjA5MjM0ODE5Nn0.Yyk-99H6T17pZYgDTefZ2QblLB6RUtmMvo9U4dHfMSs"
+)
+
+
+// 🔥 LOAD ADDED USERS (FROM CONNECTIONS)
+async function loadUsers() {
+
+  const s1 = document.getElementById("userSelect1")
+  const s2 = document.getElementById("userSelect2")
+
+  s1.innerHTML = "<option value=''>Select User1</option>"
+  s2.innerHTML = "<option value=''>Select User2</option>"
+
+  const { data: connections, error } = await supabase
+    .from("connections")
+    .select("receiver_id")
+    .eq("sender_id", user_id)
+
+  console.log("Connections:", connections)
+
+  if (error || !connections || connections.length === 0) return
+
+  const ids = connections.map(c => c.receiver_id)
+
+  const { data: users, error: userError } = await supabase
+    .from("profiles")
+    .select("id, username, phone")
+    .in("id", ids)
+
+  console.log("Users:", users)
+
+  if (userError || !users) return
+
+  users.forEach(user => {
+
+    const text = `${user.username} (${user.phone})`
+
+    const opt1 = document.createElement("option")
+    opt1.value = user.id
+    opt1.textContent = text
+
+    const opt2 = opt1.cloneNode(true)
+
+    s1.appendChild(opt1)
+    s2.appendChild(opt2)
+  })
+}
+
+
+// 🚨 SEND SOS TO SELECTED USERS
+window.sendSOS = async function () {
+
+  const user1 = document.getElementById("userSelect1").value
+  const user2 = document.getElementById("userSelect2").value
+
+  if (!user1 || !user2) {
+    alert("⚠️ select both users for SOS")
+    return
+  }
+
+  if (user1 === user2) {
+    alert("⚠️ Dont select same user twice")
+    return
+  }
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+
+    const lat = pos.coords.latitude
+    const lng = pos.coords.longitude
+
+    const { error } = await supabase.from("sos_alerts").insert([
+      {
+        sender_id: user_id,
+        receiver_id: user1,
+        latitude: lat,
+        longitude: lng
+      },
+      {
+        sender_id: user_id,
+        receiver_id: user2,
+        latitude: lat,
+        longitude: lng
+      }
+    ])
+
+    if (error) {
+      console.error(error)
+      alert("❌ SOS failed")
+      return
+    }
+
+    alert("🚨 Alert Sent!")
+    loadHistory()
+  })
+}
+// 📜 LOAD HISTORY WITH USERNAME + TIME
+async function loadHistory() {
+
+  const { data, error } = await supabase
+    .from("sos_alerts")
+    .select("receiver_id, latitude, longitude, created_at")
+    .eq("sender_id", user_id)
+    .order("created_at", { ascending: false })
+
+  const box = document.getElementById("sosHistory")
+  box.innerHTML = ""
+
+  if (error || !data || data.length === 0) {
+    box.innerHTML = "No SOS history"
+    return
+  }
+
+  for (let item of data) {
+
+    const { data: user } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", item.receiver_id)
+      .single()
+
+    const time = new Date(item.created_at).toLocaleString()
+
+    const div = document.createElement("div")
+    div.className = "history-item"
+
+    div.innerHTML = `
+      🚨 Alert sent to <b>${user?.username || "User"}</b><br>
+      📍 ${item.latitude.toFixed(3)}, ${item.longitude.toFixed(3)}<br>
+      🕒 ${time}
+    `
+
+    box.appendChild(div)
+  }
+}
+
+
+// ✅ RUN FUNCTIONS
+loadUsers()
+loadHistory()
+
+</script>
+</body>
+</html>

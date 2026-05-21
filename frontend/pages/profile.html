@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Profile</title>
+  <link rel="stylesheet" href="../css/styles.css">
+
+  <style>
+    .profile-card {
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 0 40px rgba(99,102,241,0.2);
+    }
+
+    .profile-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+    }
+
+    .profile-left {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .avatar {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      color: white;
+      overflow: hidden;
+    }
+
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .profile-name {
+      font-size: 30px;
+      color: #a78bfa;
+      margin: 0;
+    }
+
+    .profile-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
+
+    .info-box {
+      background: rgba(30, 41, 59, 0.5);
+      padding: 15px;
+      border-radius: 12px;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+      gap: 10px;
+    }
+
+    .stat-box {
+      flex: 1;
+      text-align: center;
+      padding: 15px;
+      border-radius: 12px;
+      background: rgba(99,102,241,0.2);
+    }
+
+    .edit-btn {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border: none;
+      padding: 10px 15px;
+      border-radius: 10px;
+      color: white;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo">📍 Trackora</div>
+  <a class="nav-item" href="dashboard.html">🏠 Dashboard</a>
+  <a class="nav-item" href="tracking.html">📍 Live Tracking</a>
+  <a class="nav-item" href="sos.html">🚨 SOS</a>
+  <a class="nav-item" href="analytics.html">📊 Analytics</a>
+  <a class="nav-item" href="profile.html">👤 Profile</a>
+  <a class="nav-item" href="admin.html">👑 Admin</a>
+  <a class="nav-item" href="#" onclick="logout()">🚪 Logout</a>
+  <a class="nav-item active" href="profile.html">Profile</a>
+</div>
+
+<div class="main">
+
+<div class="profile-card">
+
+  <!-- HEADER -->
+  <div class="profile-header">
+
+    <div class="profile-left">
+      <div class="avatar" id="avatar">U</div>
+
+      <div>
+        <h1 id="displayName" class="profile-name"></h1>
+        <p id="v_email"></p>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px;">
+      <button class="edit-btn" onclick="window.location.href='edit-profile.html'">✏️</button>
+      <button class="edit-btn" onclick="window.location.href='change-password.html'">🔐</button>
+    </div>
+
+  </div>
+
+  <!-- PROFILE INFO -->
+  <div class="profile-grid">
+
+    <div class="info-box"><span>👤 Full Name</span><p id="v_name"></p></div>
+    <div class="info-box"><span>📱 Phone</span><p id="v_phone"></p></div>
+    <div class="info-box"><span>🚨 Emergency</span><p id="v_emergency"></p></div>
+    <div class="info-box"><span>📍 Address</span><p id="v_address"></p></div>
+    <div class="info-box"><span>🏙 City</span><p id="v_City"></p></div>
+    <div class="info-box"><span>🌍 Country</span><p id="v_Country"></p></div>
+    <div class="info-box"><span>🎂 DOB</span><p id="v_dob"></p></div>
+    <div class="info-box"><span>⚧ Gender</span><p id="v_gender"></p></div>
+
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat-box">
+      <h3 id="distance">0 km</h3>
+      <p>Distance</p>
+    </div>
+    <div class="stat-box">
+      <h3 id="sosCount">0</h3>
+      <p>SOS Alerts</p>
+    </div>
+    <div class="stat-box">
+      <h3 id="todaySOS">0</h3>
+      <p>Today's SOS</p>
+    </div>
+  </div>
+
+</div>
+
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+const supabase = createClient(
+  "https://cjvsaqgomgzygkcryaom.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqdnNhcWdvbWd6eWdrY3J5YW9tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NzIxOTYsImV4cCI6MjA5MjM0ODE5Nn0.Yyk-99H6T17pZYgDTefZ2QblLB6RUtmMvo9U4dHfMSs"
+)
+
+// 🔤 AVATAR
+function setAvatar(name, photo) {
+  const avatar = document.getElementById("avatar");
+
+  if (photo) {
+    avatar.innerHTML = `<img src="${photo}">`;
+  } else {
+    avatar.innerText = (name || "U").charAt(0).toUpperCase();
+  }
+}
+
+
+// 🚨 SOS STATS
+async function loadSOSStats(userId) {
+
+  const { count: total } = await supabase
+    .from("sos_logs")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId);
+
+  document.getElementById("sosCount").innerText = total || 0;
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const { count: todayCount } = await supabase
+    .from("sos_logs")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .gte("created_at", today);
+
+  document.getElementById("todaySOS").innerText = todayCount || 0;
+}
+
+
+// 📥 LOAD PROFILE (ALWAYS FRESH)
+async function loadProfile() {
+
+  // ✅ GET USER DIRECTLY
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  console.log("USER:", user);
+
+  // ✅ FETCH PROFILE
+  const { data, error } = await supabase
+  .from("profiles")
+  .select("*")
+  .eq("id", user.id)
+  .maybeSingle();
+
+if (error) {
+  console.log("PROFILE ERROR:", error);
+  return;
+}
+
+if (!data) {
+  console.log("No profile row found");
+
+  document.getElementById("displayName").innerText = "User";
+  document.getElementById("v_email").innerText = user.email || "-";
+
+  return;
+}
+  if (error) {
+    console.log("PROFILE ERROR:", error);
+    return;
+  }
+
+  console.log("PROFILE DATA:", data);
+
+  // ✅ UPDATE UI
+  document.getElementById("displayName").innerText =
+    data.username || "User";
+
+  document.getElementById("v_name").innerText =
+    data.username || "-";
+
+  document.getElementById("v_email").innerText =
+    user.email || "-";
+
+  document.getElementById("v_phone").innerText =
+    data.phone || "-";
+
+  document.getElementById("v_emergency").innerText =
+    data.emergency || "-";
+
+  document.getElementById("v_address").innerText =
+    data.address || "-";
+
+  document.getElementById("v_City").innerText =
+    data.city || "-";
+
+  document.getElementById("v_Country").innerText =
+    data.country || "-";
+
+  document.getElementById("v_dob").innerText =
+    data.dob || "-";
+
+  document.getElementById("v_gender").innerText =
+    data.gender || "-";
+
+  // ✅ AVATAR
+  setAvatar(data.username, data.photo);
+
+  // ✅ SOS STATS
+  await loadSOSStats(user.id);
+}
+
+// 🔁 ALWAYS LOAD FRESH DATA
+window.onload = loadProfile;
+
+</script>
+</body>
+</html>

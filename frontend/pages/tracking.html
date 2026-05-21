@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Live Tracking</title>
+  <link rel="stylesheet" href="../css/styles.css">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo">📍 Trackora</div>
+
+  <a class="nav-item" href="dashboard.html">🏠 Dashboard</a>
+  <a class="nav-item" href="tracking.html">📍 Live Tracking</a>
+  <a class="nav-item" href="sos.html">🚨 SOS</a>
+  <a class="nav-item" href="analytics.html">📊 Analytics</a>
+  <a class="nav-item" href="profile.html">👤 Profile</a>
+  <a class="nav-item" href="admin.html">👑 Admin</a>
+  <a class="nav-item" href="login.html">🚪 Logout</a>
+  <a class="nav-item active" href="tracking.html">Live Tracking</a>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<h1 class="title glow-text">Live Tracking</h1>
+
+<div class="card" style="height:400px;">
+  <div id="map" style="height:100%; border-radius:12px;"></div>
+</div>
+
+<br>
+
+<!-- ✅ THIS SHOULD BE OUTSIDE SCRIPT -->
+<div class="grid">
+
+  <div class="card">
+    <h3>📍 Location</h3>
+    <p id="locationText">Fetching...</p>
+  </div>
+
+  <div class="card">
+    <h3>🚗 Speed</h3>
+    <h2 class="glow-text" id="speedText">--</h2>
+  </div>
+
+  <div class="card">
+    <h3>⏱ Last Update</h3>
+    <p id="timeText">--</p>
+  </div>
+
+</div>
+
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+
+
+let map = L.map('map').setView([28.6139, 77.2090], 13);
+
+// Map tiles
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
+.addTo(map);
+
+// 🔐 AUTH
+const user_id = localStorage.getItem("user_id");
+if (!user_id) window.location.href = "login.html";
+
+// 🧑 YOUR MARKER
+let marker = L.marker([28.6139, 77.2090]).addTo(map);
+
+// 👥 OTHER USERS
+let userMarkers = {};
+
+// 🚨 SOS MARKERS
+let sosMarkers = {};
+const sosIcon = L.divIcon({
+  className: "sos-marker",
+  html: "🚨",
+  iconSize: [30, 30]
+});
+
+// 🔥 PATH
+let path = [];
+let polyline = L.polyline(path, {
+  color: '#8b5cf6',
+  weight: 5
+}).addTo(map);
+
+
+// 🧠 LOAD OLD PATH (LIMITED)
+async function loadHistory() {
+  const res = await fetch("http://127.0.0.1:5000/get-locations");
+  const data = await res.json();
+
+  data.slice(-50).forEach(loc => {   // ✅ limit for performance
+    path.push([loc.lat, loc.lng]);
+  });
+
+  polyline.setLatLngs(path);
+
+  if (path.length > 0) {
+    marker.setLatLng(path[path.length - 1]);
+  }
+}
+
+loadHistory();
+
+
+// 📍 LIVE TRACKING (FIXED)
+let lastSendTime = 0;
+
+navigator.geolocation.watchPosition(
+  (position) => {
+    const lat = position.coords.latitude;
+    const lng = position.coords.longitude;
+    const speed = position.coords.speed;
+
+    const newPoint = [lat, lng];
+
+    // ✅ Move marker (NO shaking)
+    marker.setLatLng(newPoint);
+
+    // ✅ Set map only once
+    if (path.length === 0) {
+      
+    }
+
+    // ✅ Limit path size
+    path.push(newPoint);
+    if (path.length > 50) path.shift();
+
+    polyline.setLatLngs(path);
+
+    // ✅ Send to backend every 3 sec
+    const now = Date.now();
+    if (now - lastSendTime > 3000) {
+      fetch("http://127.0.0.1:5000/update-location", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          user_id: user_id,
+          lat: lat,
+          lng: lng
+        })
+      });
+
+      lastSendTime = now;
+    }
+
+    // UI
+    document.getElementById("locationText").innerText =
+      lat.toFixed(4) + ", " + lng.toFixed(4);
+
+    document.getElementById("speedText").innerText =
+      speed ? (speed * 3.6).toFixed(1) + " km/h" : "0 km/h";
+
+    document.getElementById("timeText").innerText =
+      new Date().toLocaleTimeString();
+  },
+  () => {
+    alert("Allow location access!");
+  },
+  {
+    enableHighAccuracy: true,
+    maximumAge: 0,
+    timeout: 5000
+  }
+);
+
+
+// 👥 LOAD OTHER USERS
+function loadUsers() {
+  fetch("http://127.0.0.1:5000/get-locations")
+    .then(res => res.json())
+    .then(data => {
+
+      data.forEach(user => {
+
+        if (user.user_id == user_id) return;
+
+        const point = [user.lat, user.lng];
+
+        if (!userMarkers[user.user_id]) {
+          userMarkers[user.user_id] = L.marker(point)
+            .addTo(map)
+            .bindPopup("User " + user.user_id);
+        } else {
+          userMarkers[user.user_id].setLatLng(point);
+        }
+
+      });
+
+    });
+}
+
+
+// 🚨 LOAD SOS
+function loadSOS() {
+  fetch("http://127.0.0.1:5000/get-sos")
+    .then(res => res.json())
+    .then(data => {
+
+      data.forEach(user => {
+
+        const point = [user.lat, user.lng];
+
+        if (!sosMarkers[user.user_id]) {
+          sosMarkers[user.user_id] = L.marker(point, { icon: sosIcon })
+            .addTo(map)
+            .bindPopup("🚨 SOS USER: " + user.user_id);
+        } else {
+          sosMarkers[user.user_id].setLatLng(point);
+        }
+
+      });
+
+    });
+}
+
+
+// 🔁 AUTO REFRESH
+setInterval(loadUsers, 3000);
+setInterval(loadSOS, 3000);
+
+</script>
+const user_id = localStorage.getItem("user_id");
+
+// सुरक्षा check
+if (!user_id) {
+  window.location.href = "login.html";
+}
+
+</body>
+</html>

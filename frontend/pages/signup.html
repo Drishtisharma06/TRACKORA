@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Signup</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+
+<body>
+
+<div class="center">
+  <div class="card glow" style="width: 350px;">
+    <h2 style="text-align:center;">Create Account</h2>
+
+    <input id="name" class="input" placeholder="Name">
+    <input id="email" class="input" placeholder="Email">
+    <input id="phone" class="input" placeholder="Phone">
+    <input id="password" class="input" type="password" placeholder="Password">
+
+    <button class="btn" onclick="signup()" style="width:100%; margin-top:15px;">
+      Signup
+    </button>
+
+    <p style="text-align:center; margin-top:10px;">
+      Already have an account? <a href="login.html">Login</a>
+    </p>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+const supabase = createClient(
+  "https://cjvsaqgomgzygkcryaom.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqdnNhcWdvbWd6eWdrY3J5YW9tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NzIxOTYsImV4cCI6MjA5MjM0ODE5Nn0.Yyk-99H6T17pZYgDTefZ2QblLB6RUtmMvo9U4dHfMSs"
+)
+window.signup = async function () {
+
+  const name = document.getElementById("name").value;
+  const email = document.getElementById("email").value;
+  const phone = document.getElementById("phone").value;
+  const password = document.getElementById("password").value;
+
+  // ✅ Auth Signup
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password
+  });
+
+  if (error) return alert(error.message);
+
+  // wait for auth sync
+await new Promise(res => setTimeout(res, 1500));
+
+// ✅ GET REAL USER
+const {
+  data: { user }
+} = await supabase.auth.getUser();
+
+console.log("USER:", user);
+
+if (!user) {
+  alert("User not found");
+  return;
+}
+
+  // ✅ Insert profile
+  const { error: profileError } = await supabase
+  .from("profiles")
+  .upsert([
+    {
+      id: user.id,
+      username: name,
+      phone: phone
+    }
+  ], {
+    onConflict: 'id'
+  });
+
+  if (profileError) return alert(profileError.message);
+
+  alert("Signup successful");
+  window.location.href = "login.html";
+}
+</script>
+
+</body>
+</html>

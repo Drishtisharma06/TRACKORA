@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+
+<body>
+
+<div class="center">
+  <div class="card glow" style="width: 350px;">
+    <h2 style="text-align:center;">Welcome Back to Trackify!</h2>
+    
+    <input id="email" class="input" placeholder="Email">
+<input id="password" class="input" type="password" placeholder="Password">
+
+    <button class="btn" onclick="login()" style="width:100%; margin-top:15px;">
+  Login
+</button>
+
+    <p style="text-align:center; margin-top:10px;">
+      Don't have an account? <a href="signup.html">Signup</a>
+    </p>
+  </div>
+  <script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+const supabase = createClient(
+  "https://cjvsaqgomgzygkcryaom.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqdnNhcWdvbWd6eWdrY3J5YW9tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NzIxOTYsImV4cCI6MjA5MjM0ODE5Nn0.Yyk-99H6T17pZYgDTefZ2QblLB6RUtmMvo9U4dHfMSs"
+);
+// ✅ MAKE FUNCTION GLOBAL
+window.login = async function () {
+
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  console.log("Login clicked");
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+  alert("❌ " + error.message);
+  return;
+}
+
+console.log("LOGIN SUCCESS", data);
+
+// ✅ SAVE USER ID
+localStorage.setItem("user_id", data.user.id);
+
+// ✅ REDIRECT
+window.location.replace("dashboard.html");
+
+}
+</script>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="../css/styles.css">
+
+  <style>
+    .main { padding: 30px; }
+    .title { font-size: 32px; margin-bottom: 25px; color: #a78bfa; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.7);
+      padding: 20px;
+      border-radius: 16px;
+      border: 1px solid rgba(99,102,241,0.2);
+      transition: 0.3s;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(99,102,241,0.2);
+    }
+
+    .card h3 {
+      font-size: 18px;
+      margin-bottom: 10px;
+      color: #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card p {
+      font-size: 14px;
+      color: #9ca3af;
+      margin-bottom: 15px;
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      font-size: 14px;
+    }
+
+    .btn:hover { opacity: 0.9; }
+    .btn.sos { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+    #distance { font-size: 28px; color: #a78bfa; }
+
+    .activity-box { margin-top: 20px; }
+
+    #activity1, #activity2 {
+      font-size: 14px;
+      color: #d1d5db;
+      margin-top: 5px;
+    }
+
+    /* 🔥 NEW: search styling (same theme) */
+    .search-box {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .search-box input {
+      flex: 1;
+      padding: 8px;
+      border-radius: 8px;
+      border: none;
+    }
+    /* 🔥 USER LIST DESIGN */
+.user-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.6);
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin-top: 10px;
+  border: 1px solid rgba(99,102,241,0.2);
+  transition: 0.3s;
+}
+
+.user-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(99,102,241,0.2);
+}
+
+/* TEXT */
+.user-info {
+  color: #e5e7eb;
+  font-size: 14px;
+}
+
+/* DELETE BUTTON */
+.delete-btn {
+  background: rgba(239, 68, 68, 0.15);
+  border: none;
+  color: #ef4444;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.3s;
+}
+
+.delete-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+body{
+  display:none;
+}
+
+  </style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo">📍 Trackora</div>
+
+  <a class="nav-item" href="dashboard.html">🏠 Dashboard</a>
+  <a class="nav-item" href="tracking.html">📍 Live Tracking</a>
+  <a class="nav-item" href="sos.html">🚨 SOS</a>
+  <a class="nav-item" href="analytics.html">📊 Analytics</a>
+  <a class="nav-item" href="profile.html">👤 Profile</a>
+  <a class="nav-item" href="admin.html">👑 Admin</a>
+  <a class="nav-item" href="login.html">🚪 Logout</a>
+  <a class="nav-item active" href="dashboard.html"> Dashboard</a>
+</div>
+
+<div class="main">
+
+<h1 class="title">Dashboard Overview</h1>
+
+<div class="grid">
+
+  <!-- 📍 LOCATION -->
+  <div class="card">
+    <h3>📍 Current Location</h3>
+    <p id="locationText">Fetching location...</p>
+    <button class="btn" onclick="goToMap()">View Map</button>
+  </div>
+
+  <!-- 🚨 SOS -->
+  <div class="card">
+    <h3>🚨 SOS Alerts</h3>
+    <p id="sosStatus">No active alerts</p>
+    <button class="btn sos" onclick="sendSOS()">Send SOS</button>
+  </div>
+
+  <!-- 📏 DISTANCE -->
+  <div class="card">
+    <h3>📏 Distance Travelled</h3>
+    <h2 id="distance">0 km</h2>
+  </div>
+
+</div>
+
+<!-- ACTIVITY -->
+<div class="card activity-box">
+  <h3>Recent Activity</h3>
+  <p id="activity1">✔ Loading...</p>
+  <p id="activity2"></p>
+</div>
+
+<!-- 🔍 SEARCH USER (NEW - SAME UI STYLE) -->
+<div class="card activity-box">
+  <h3>🔍 Search User</h3>
+
+  <div class="search-box">
+    <input id="searchPhone" placeholder="Enter phone number">
+    <button class="btn" onclick="searchUser()">Search</button>
+  </div>
+
+  <div id="searchResult"></div>
+</div>
+
+<!-- USERS -->
+<div class="card activity-box">
+  <h3>👥 Users</h3>
+  <ul id="usersList"></ul>
+</div>
+
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+const supabase = createClient(
+  "https://cjvsaqgomgzygkcryaom.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqdnNhcWdvbWd6eWdrY3J5YW9tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NzIxOTYsImV4cCI6MjA5MjM0ODE5Nn0.Yyk-99H6T17pZYgDTefZ2QblLB6RUtmMvo9U4dHfMSs"
+)
+
+const user_id = localStorage.getItem("user_id")
+
+if (!user_id) {
+  window.location.replace("login.html")
+} else {
+  document.body.style.display = "block"
+}
+// 📍 LOCATION + SAVE
+function sendLocation() {
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const lat = pos.coords.latitude
+    const lon = pos.coords.longitude
+
+    document.getElementById("locationText").innerText =
+      `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`
+
+    document.getElementById("activity1").innerText = "✔ Location updated"
+
+    await supabase.from("locations").insert([
+      { user_id, latitude: lat, longitude: lon }
+    ])
+  })
+}
+setInterval(sendLocation, 5000)
+
+
+// 🔍 SEARCH USER
+window.searchUser = async function () {
+
+  const phone = document.getElementById("searchPhone").value.trim()
+  const resultDiv = document.getElementById("searchResult")
+
+  if (!phone) {
+    resultDiv.innerText = "❌ Enter phone number"
+    return
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, username, phone")
+    .eq("phone", phone)
+    .maybeSingle()
+
+  if (error || !data) {
+    resultDiv.innerText = "❌ User not found"
+    return
+  }
+
+  if (data.id === user_id) {
+    resultDiv.innerText = "❌ You cannot add yourself"
+    return
+  }
+
+  resultDiv.innerHTML = `
+    <p><strong>Name:</strong> ${data.username}</p>
+    <p><strong>Phone:</strong> ${data.phone}</p>
+    <button class="btn" onclick="addUser('${data.id}')">Add User</button>
+  `
+}
+
+
+// ➕ ADD USER
+window.addUser = async function (receiver_id) {
+
+  const { data: existing } = await supabase
+    .from("connections")
+    .select("id")
+    .eq("sender_id", user_id)
+    .eq("receiver_id", receiver_id)
+    .maybeSingle()
+
+  if (existing) {
+    alert("⚠️ Already added")
+    return
+  }
+
+  const { error } = await supabase.from("connections").insert([
+    {
+      sender_id: user_id,
+      receiver_id,
+      status: "accepted"
+    }
+  ])
+
+  if (error) {
+    console.error(error)
+    alert("❌ Failed to add user")
+    return
+  }
+
+  alert("✅ User Added")
+  await loadUsers()
+}
+
+
+// 👥 LOAD USERS
+async function loadUsers() {
+
+  const list = document.getElementById("usersList")
+  list.innerHTML = "Loading..."
+
+  const { data: connections, error } = await supabase
+    .from("connections")
+    .select("*")
+    .eq("sender_id", user_id)
+
+  if (error) {
+    console.error(error)
+    list.innerHTML = "❌ Error loading users"
+    return
+  }
+
+  if (!connections || connections.length === 0) {
+    list.innerHTML = "No users added"
+    return
+  }
+
+  list.innerHTML = ""
+
+  for (let conn of connections) {
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username, phone")
+      .eq("id", conn.receiver_id)
+      .single()
+
+    const li = document.createElement("li")
+
+    li.innerHTML = `
+      <div class="user-item">
+        <div class="user-info">
+          👤 ${profile?.username || "Unknown"} (${profile?.phone || "No phone"})
+        </div>
+        <button class="delete-btn" onclick="deleteUser('${conn.id}', this)">🗑️</button>
+      </div>
+    `
+
+    list.appendChild(li)
+  }
+}
+
+
+// ❌ DELETE USER (FIXED PROPERLY)
+window.deleteUser = async function (connection_id, btn) {
+
+  const confirmDelete = confirm("🗑️ Remove this user?")
+  if (!confirmDelete) return
+
+  const { error } = await supabase
+    .from("connections")
+    .delete()
+    .eq("id", connection_id)
+
+  if (error) {
+    console.error(error)
+    alert("❌ Delete failed")
+    return
+  }
+
+  // remove from UI
+  const item = btn.closest("li")
+  if (item) item.remove()
+
+  // refresh if empty
+  if (!document.getElementById("usersList").children.length) {
+    document.getElementById("usersList").innerHTML = "No users added"
+  }
+
+  alert("✅ User removed")
+}
+
+
+// 🚀 INITIAL LOAD
+loadUsers()
+
+
+// 🚨 SOS
+window.sendSOS = function () {
+  document.getElementById("sosStatus").innerText = "SOS Alert Sent!"
+  document.getElementById("activity2").innerText = "✔ SOS triggered"
+  alert("🚨 SOS sent successfully!")
+}
+
+
+// 🗺️ MAP
+window.goToMap = function () {
+  window.location.href = "tracking.html"
+}
+async function loadIncomingSOS() {
+
+  const { data } = await supabase
+    .from("sos_alerts")
+    .select("*")
+    .eq("receiver_id", user_id)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+
+  const box = document.getElementById("incomingSOS")
+
+  if (!data || data.length === 0) {
+    box.innerHTML = "No alerts"
+    return
+  }
+
+  box.innerHTML = ""
+
+  for (let item of data) {
+
+    const { data: sender } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", item.sender_id)
+      .single()
+
+    const time = new Date(item.created_at).toLocaleString()
+
+    const div = document.createElement("div")
+    div.className = "alert-card"
+
+    div.innerHTML = `
+      🚨 SOS from <b>${sender?.username}</b><br>
+      🕒 ${time}<br>
+      <button onclick="markDone('${item.id}')">OK</button>
+    `
+
+    box.appendChild(div)
+  }
+}
+
+setInterval(loadIncomingSOS, 3000)
+
+window.markDone = async function (id) {
+
+  await supabase
+    .from("sos_alerts")
+    .update({ status: "done" })
+    .eq("id", id)
+
+  loadIncomingSOS()
+}
+</script>

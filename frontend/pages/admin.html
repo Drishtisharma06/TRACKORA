@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="../css/styles.css">
+
+  <!-- ✅ Leaflet (stable version) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    .user-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      margin-bottom: 10px;
+      background: rgba(30,41,59,0.6);
+      border-radius: 10px;
+    }
+
+    .user-name {
+      color: #a78bfa;
+      font-weight: 600;
+    }
+
+    .user-actions button {
+      margin-left: 8px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-loc { background:#22c55e; color:white; }
+    .btn-sos { background:#ef4444; color:white; }
+
+    #usersCard { display: none; }
+
+    #toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #8b5cf6;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo">📍 Trackora</div>
+
+  <a class="nav-item" href="dashboard.html">🏠 Dashboard</a>
+  <a class="nav-item" href="tracking.html">📍 Live Tracking</a>
+  <a class="nav-item" href="sos.html">🚨 SOS</a>
+  <a class="nav-item" href="analytics.html">📊 Analytics</a>
+  <a class="nav-item" href="profile.html">👤 Profile</a>
+  <a class="nav-item" href="admin.html">👑 Admin</a>
+  <a class="nav-item" href="#" onclick="logout()">🚪 Logout</a>
+  <a class="nav-item active" href="admin.html">Admin</a>
+</div>
+
+<div class="main">
+
+<h1 class="title glow-text"> Admin Live Dashboard</h1>
+
+<!-- STATS -->
+<div class="grid">
+  <div class="card"><h3>Users</h3><h2 id="userCount">0</h2></div>
+  <div class="card"><h3>Locations</h3><h2 id="locCount">0</h2></div>
+  <div class="card"><h3>SOS</h3><h2 id="sosCount">0</h2></div>
+</div>
+
+<!-- BUTTON -->
+<button class="btn" onclick="toggleUsers()" style="margin-top:15px;">
+  👥 Users
+</button>
+
+<!-- USERS -->
+<div class="card" id="usersCard" style="margin-top:20px;">
+  <div id="usersList"></div>
+</div>
+
+<!-- MAP -->
+<div class="card" style="height:400px; margin-top:20px;">
+  <div id="map" style="height:100%; border-radius:10px;"></div>
+</div>
+
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+
+// 🔐 AUTH
+if (!localStorage.getItem("user_id")) {
+  window.location.href = "login.html";
+}
+
+// 🌍 MAP INIT
+let map = L.map('map').setView([28.6139, 77.2090], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+// 🔧 FIX (important)
+setTimeout(() => {
+  map.invalidateSize();
+}, 500);
+
+// 📊 GLOBAL VARIABLES
+let userMarkers = {};
+let sosMarkers = [];
+
+// 👥 USERS TOGGLE
+function toggleUsers() {
+  const card = document.getElementById("usersCard");
+
+  if (card.style.display === "none") {
+    card.style.display = "block";
+    loadUserList();
+  } else {
+    card.style.display = "none";
+  }
+}
+
+// 👥 DUMMY USERS
+function loadUserList() {
+  const container = document.getElementById("usersList");
+  container.innerHTML = "";
+
+  const users = [
+    { id: 1, name: "User 1" },
+    { id: 2, name: "User 2" },
+    { id: 3, name: "User 3" }
+  ];
+
+  users.forEach(user => {
+    container.innerHTML += `
+      <div class="user-row">
+        <div class="user-name">👤 ${user.name}</div>
+
+        <div class="user-actions">
+          <button class="btn-loc" onclick="sendLocation(${user.id})">📍</button>
+          <button class="btn-sos" onclick="triggerSOS(${user.id})">🚨</button>
+        </div>
+      </div>
+    `;
+  });
+
+  document.getElementById("userCount").innerText = users.length;
+}
+
+// 📍 SEND REAL LOCATION
+function sendLocation(user_id) {
+  navigator.geolocation.getCurrentPosition((pos) => {
+
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+
+    fetch("http://127.0.0.1:5000/admin-location", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ user_id, lat, lng })
+    });
+
+    showToast("📍 Location sent");
+
+  }, () => {
+    alert("Allow location access ❌");
+  });
+}
+
+// 🚨 SEND SOS
+function triggerSOS(user_id) {
+  navigator.geolocation.getCurrentPosition((pos) => {
+
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+
+    fetch("http://127.0.0.1:5000/admin-sos", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ user_id, lat, lng })
+    });
+
+    showToast("🚨 SOS sent");
+
+  }, () => {
+    alert("Allow location access ❌");
+  });
+}
+
+// 📍 LOAD LOCATIONS
+async function loadMapUsers() {
+  try {
+    const res = await fetch("http://127.0.0.1:5000/get-locations");
+    const data = await res.json();
+
+    let unique = new Set();
+
+    data.forEach(loc => {
+      unique.add(loc.user_id);
+
+      if (userMarkers[loc.user_id]) {
+        userMarkers[loc.user_id].setLatLng([loc.lat, loc.lng]);
+      } else {
+        userMarkers[loc.user_id] = L.marker([loc.lat, loc.lng])
+          .addTo(map)
+          .bindPopup("👤 User " + loc.user_id);
+      }
+    });
+
+    document.getElementById("userCount").innerText = unique.size;
+    document.getElementById("locCount").innerText = data.length;
+
+  } catch (e) {
+    console.log("Location error:", e);
+  }
+}
+
+// 🚨 LOAD SOS
+async function loadSOS() {
+  try {
+    const res = await fetch("http://127.0.0.1:5000/get-sos");
+    const data = await res.json();
+
+    sosMarkers.forEach(m => map.removeLayer(m));
+    sosMarkers = [];
+
+    const redIcon = L.icon({
+      iconUrl: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+      iconSize: [32, 32]
+    });
+
+    data.forEach(s => {
+      const marker = L.marker([s.lat, s.lng], { icon: redIcon })
+        .addTo(map)
+        .bindPopup("🚨 SOS from User " + s.user_id);
+
+      sosMarkers.push(marker);
+    });
+
+    document.getElementById("sosCount").innerText = data.length;
+
+  } catch (e) {
+    console.log("SOS error:", e);
+  }
+}
+
+// 🔁 AUTO REFRESH
+setInterval(() => {
+  loadMapUsers();
+  loadSOS();
+}, 4000);
+
+// 🚀 INITIAL LOAD
+loadMapUsers();
+loadSOS();
+
+// 🔔 TOAST
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.innerText = msg;
+  t.style.display = "block";
+
+  setTimeout(() => {
+    t.style.display = "none";
+  }, 2000);
+}
+
+// 🚪 LOGOUT
+function logout() {
+  localStorage.removeItem("user_id");
+  window.location.href = "login.html";
+}
+
+</script>
+
+</body>
+</html>
