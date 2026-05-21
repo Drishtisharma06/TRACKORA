@@ -143,7 +143,7 @@ Admin Panel (Demo Mode) ⚠️
 
 # ⭐ Trackora
 
-### “Track Smarter. Stay Safer.”
+### “Always Connected. Always Protected.”
 
 ---
 
